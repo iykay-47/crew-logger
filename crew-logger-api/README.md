@@ -45,7 +45,7 @@ Locally, install the dev file — it pulls in both:
 ```bash
 pip install -r requirements-dev.txt
 ```
-Images install `requirements.txt` only. See [`docs/deployment.md`](docs/deployment.md).
+Images install `requirements.txt` only. See [`../docs/deployment.md`](../docs/deployment.md).
 
 Per `CLAUDE.md`, don't add packages without asking first.
 
@@ -176,17 +176,17 @@ the real 74-row historic dataset, and nothing persists. Verified directly —
 - `tests/` — see "Running tests" above.
 - `features/` — one spec file per endpoint group, with a phase and a
   definition-of-done checklist.
-- `docs/` — see below.
+- `../docs/` (repo root) — see below.
 
 ## Documentation
 
 | File | For | Contents |
 |---|---|---|
-| [`docs/how-it-works.md`](docs/how-it-works.md) | anyone, non-technical | Plain-language walkthrough of what the app does and how data flows. Start here. |
-| [`docs/deployment.md`](docs/deployment.md) | wiring up deployments | Ports, environment contract, image contents, startup ordering, gotchas. Everything needed to write Dockerfiles and deployment YAML. |
-| [`docs/decisions.md`](docs/decisions.md) | anyone changing the code | Why the codebase is the way it is — the reasoning behind each design choice, and the bugs that motivated several of them. Read before changing the schema. |
-| [`docs/data-model.md`](docs/data-model.md) | schema reference | Authoritative table/column definitions. |
-| [`docs/endpoints.md`](docs/endpoints.md) | API reference | Full endpoint list by phase. |
+| [`../docs/how-it-works.md`](../docs/how-it-works.md) | anyone, non-technical | Plain-language walkthrough of what the app does and how data flows. Start here. |
+| [`../docs/deployment.md`](../docs/deployment.md) | wiring up deployments | Ports, environment contract, image contents, startup ordering, gotchas. Everything needed to write Dockerfiles and deployment YAML. |
+| [`../docs/decisions.md`](../docs/decisions.md) | anyone changing the code | Why the codebase is the way it is — the reasoning behind each design choice, and the bugs that motivated several of them. Read before changing the schema. |
+| [`../docs/data-model.md`](../docs/data-model.md) | schema reference | Authoritative table/column definitions. |
+| [`../docs/endpoints.md`](../docs/endpoints.md) | API reference | Full endpoint list by phase. |
 
 ## Notes
 

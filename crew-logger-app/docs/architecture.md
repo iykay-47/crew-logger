@@ -1,20 +1,30 @@
-# Architecture
+# Architecture (frontend view)
 
 ## Flow
-Expo app (phone/browser) → HTTP requests → Python FastAPI backend → SQL queries → Postgres
+Expo app (browser/phone) → HTTP → FastAPI backend → SQL → Postgres
 
-## Repos
-- crew-logger — Expo frontend (this repo)
-- crew-logger-api — Python FastAPI backend (separate repo)
+## Layout
+Both halves live in one repo:
+- `crew-logger-app/` — Expo frontend (this project)
+- `crew-logger-api/` — FastAPI backend + Postgres
 
 ## Rules
-- Frontend never touches the database directly
-- All data flows through the Python backend
-- Auth tokens are issued by the backend and sent with every request
-- The backend is the single source of truth for business rules
+- The frontend never touches the database directly.
+- All data flows through the backend, which is the single source of truth for
+  business rules — **including summaries and totals**. This app displays what
+  the API returns; it does not compute aggregates.
+- Auth tokens are issued by the backend and sent with every request (Phase 2 —
+  not built yet).
 
 ## Development
-- Frontend runs via Expo (npx expo start) on localhost
-- Backend runs via FastAPI (uvicorn) on localhost
-- Postgres runs in Docker on localhost
-- Frontend points to backend at http://localhost:8000 during development
+- Backend: `uvicorn app.main:app --reload` on `:8000`
+- Postgres: Docker, `:5432`
+- Frontend: `npx expo start --web` (dev server on `:8081`)
+- Base URL comes from `app.json` `extra` via `expo-constants`, defaulting to
+  `http://localhost:8000`
+
+Because the dev server (`:8081`) and API (`:8000`) are different origins, the
+backend must send CORS headers for browser requests to succeed.
+
+For the full schema, deployment topology, and design rationale see the root
+`docs/` folder.

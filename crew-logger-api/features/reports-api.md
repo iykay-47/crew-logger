@@ -1,39 +1,64 @@
 # Reports API
 
 ## What it does
-Endpoints that return computed summaries over a user's job records.
+Endpoints that return computed summaries over job records.
 
 Totals are derived from the shared `jobs` record — `work_minutes` and
-`run_miles` — scoped to the jobs the user has a participation row on.
-Participation itself carries no hours or miles. See docs/data-model.md.
+`run_miles`. Participation itself carries no hours or miles. See
+`../docs/data-model.md`.
 
 ## Endpoints
-- GET /reports/summary?month=3&year=2026 — monthly totals for the logged-in user
-- GET /reports/weekly — current week totals
-- GET /reports/comparison?month=3&year=2026 — this month vs previous month
+- GET /reports/summary — all-time totals
+- GET /reports/weekly — current week (Monday–Sunday)
+- GET /reports/monthly — one row per month with records, oldest first
 
-## What summary returns
-- total_work_minutes (sum of jobs.work_minutes; formatted to HHMM / "5h 45m" for display)
-- total_miles (sum of jobs.run_miles)
-- job_count
-- average_work_minutes_per_job
-- period (date range covered)
+## What each returns
+- `period` — what the row covers (`"all-time"`, a date range, or `"2026-01"`)
+- `job_count`
+- `total_work_minutes` — sum of `jobs.work_minutes`, raw integer minutes
+- `total_miles` — sum of `jobs.run_miles`
+- `average_work_minutes_per_job`
+
+Minutes are returned raw, **not** pre-formatted. Rendering "7h 30m" is
+presentation and belongs in the frontend, so the API stays usable by any
+client.
 
 ## Rules
-- Only includes records with status "confirmed"
-- Scoped to jobs the logged-in user has a participation row on
-- A shared job counts once per user, not once per crew member
-- Returns zeros (not errors) for periods with no data
-- Derived at query time — never stored (see facts vs derivations, docs/data-model.md)
+- Aggregate directly on `jobs` — **never** through a `participation` join. A
+  job with two crew members has two participation rows, and joining would
+  count its minutes and miles twice.
+- Returns zeros (not errors, not nulls) for periods with no data.
+- Derived at query time, never stored — see facts vs derivations in
+  `../docs/decisions.md`.
+
+## Two temporary scoping decisions
+
+**Statuses.** This spec originally said confirmed-only. That assumes the Phase
+3 confirmation flow, which does not exist — nothing transitions a record to
+`confirmed`, so new entries (defaulting to `submitted`) would never appear in
+any summary while the 74 historic records, imported as `confirmed`, always
+would. Reports currently cover **all non-draft** records. Tighten to
+confirmed-only when Phase 3 lands.
+
+**No per-user scoping.** Originally scoped to the logged-in user's
+participation rows. There is no auth and one employee owns every record, so
+totals cover everything. Phase 2 adds the scoping join — and that join is
+exactly where the double-count risk above appears, which is why a test guards
+it now.
+
+## Deferred
+`GET /reports/comparison` (this month vs previous) — not needed for the
+current screens.
 
 ## Phase
-After Phase 3 (needs auth and confirmed records)
+Phase 2. The original "after Phase 3" gate was auth-for-scoping, which no
+longer applies while the app is single-user.
 
 ## Definition of done
-- [ ] Monthly summary returns correct totals
-- [ ] Weekly summary returns correct totals
-- [ ] Comparison returns current and previous month side by side
-- [ ] Only confirmed records are counted
-- [ ] A job shared by two crew members is not double-counted for one user
-- [ ] Empty periods return zero values, not errors
-- [ ] Calculations match manual verification on test data
+- [x] All-time summary returns correct totals
+- [x] Weekly summary returns correct totals
+- [x] Monthly breakdown returns one row per month
+- [x] A job shared by two crew members is not double-counted
+- [x] Draft records are excluded
+- [x] Empty periods return zero values, not errors
+- [x] Calculations match manual verification against psql on the 74 records

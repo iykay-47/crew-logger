@@ -33,13 +33,24 @@ See features/participation-api.md.
 No dispute endpoint — disagreement is a counter-edit via PUT /entries/{id}.
 See features/confirmation-api.md.
 
-## Reports (after Phase 3)
-- GET    /reports/summary             — monthly totals
-- GET    /reports/weekly              — current week totals
-- GET    /reports/comparison          — month vs previous month
+## Reports (Phase 2 — built)
+- GET    /reports/summary             — all-time totals
+- GET    /reports/weekly              — current week (Mon–Sun)
+- GET    /reports/monthly             — one row per month, oldest first
 
-Totals derive from jobs.work_minutes and jobs.run_miles, scoped by
-participation. See features/reports-api.md.
+Totals derive from jobs.work_minutes and jobs.run_miles, aggregated directly
+on jobs (never through a participation join — that would double-count a job
+with two crew members). Minutes are returned raw; formatting is the client's
+job. See crew-logger-api/features/reports-api.md.
+
+/reports/comparison is deferred.
+
+## CORS
+Browser clients are a different origin from the API (Expo's web dev server is
+:8081, the API :8000), so the API sends CORS headers. Allowed origins come
+from the CORS_ORIGINS environment variable — not a wildcard. Not needed at all
+if the frontend is served same-origin behind a reverse proxy; see
+docs/deployment.md.
 
 ## Auth requirements
 Phase 1: No auth required on any endpoint

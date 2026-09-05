@@ -52,6 +52,7 @@ at startup rather than mysteriously at first request.
 | `DATABASE_URL` | `app/config.py` | yes | full SQLAlchemy URL |
 | `JWT_SECRET` | `app/config.py` | yes | unused until Phase 2, but still required to boot |
 | `JWT_EXPIRY_DAYS` | `app/config.py` | yes | cast with `int()` — a non-numeric value crashes at import |
+| `CORS_ORIGINS` | `app/config.py` → `app/main.py` | no | comma-separated browser origins; defaults to Expo's dev server. **Never `*`** on a reachable network. Unnecessary if served same-origin behind a proxy |
 | `POSTGRES_DB` | Postgres image, Compose interpolation | yes | |
 | `POSTGRES_USER` | Postgres image, Compose interpolation, healthcheck | yes | |
 | `POSTGRES_PASSWORD` | Postgres image, Compose interpolation | yes | |

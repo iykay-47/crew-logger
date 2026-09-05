@@ -6,6 +6,17 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.models.database import JobSource, JobStatus
 
 
+class ReportPeriod(BaseModel):
+    """One period's totals. `work_minutes` stays raw — formatting to
+    "7h 30m" is presentation and belongs in the frontend."""
+
+    period: str
+    job_count: int
+    total_work_minutes: int
+    total_miles: float
+    average_work_minutes_per_job: int
+
+
 class ParticipationCreate(BaseModel):
     employee_number: str = Field(min_length=1)
     claims: dict | None = None

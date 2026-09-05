@@ -271,3 +271,97 @@ What needs addressing:
 | `api` service in `docker-compose.yml` is commented out | a `condition: service_healthy` block is already drafted there, ready to uncomment |
 
 The `CMD` line is correct as written — `--host 0.0.0.0` is exactly right.
+
+---
+
+# Deploying the frontend
+
+`crew-logger-app` is an Expo project. `npx expo export --platform web`
+produces a **static** site — plain HTML, JS and CSS with no server runtime.
+Serving it needs only a static file server; there is no Node process in
+production.
+
+## The rule that catches everyone
+
+**A static SPA's API calls are made by the browser, not by the container.**
+
+So this can never work, no matter how correct it looks:
+
+```
+apiBaseUrl = "http://api:8000"     # WRONG from a browser
+```
+
+`api` is a Docker service name. Docker's DNS resolves it only *inside* the
+Docker network — and the browser is outside it, running on the user's machine.
+The frontend container never makes the request, so its network view is
+irrelevant. The URL must be one the **browser** can reach.
+
+This is the single most common mistake when containerising a SPA, and it fails
+confusingly: server-side checks pass, the container starts healthy, and only
+the browser's network tab shows what's wrong.
+
+## Two topologies
+
+### A. Reverse proxy — recommended
+
+One web server serves the static build *and* forwards `/api/*` to the API
+container:
+
+```
+browser ──> nginx ─┬─> static files  (/)
+                   └─> proxy_pass    (/api/ -> http://api:8000/)
+```
+
+The proxy *is* inside the Docker network, so `http://api:8000` works there —
+that's the difference from the browser case above.
+
+Set `apiBaseUrl` to the relative path `/api`. Then:
+
+- **No CORS at all** — same origin, so the browser never does a cross-origin
+  check. `CORS_ORIGINS` becomes irrelevant.
+- **Nothing baked in** — a relative URL is correct in every environment, so one
+  build artefact works everywhere.
+- One published port instead of two.
+
+Cost: an nginx config to write, and the frontend can't be deployed entirely
+independently of the API path.
+
+### B. Separate origins
+
+Frontend and API published on different ports; the browser calls
+`http://localhost:8000` (or a real hostname) directly.
+
+- Requires `CORS_ORIGINS` to list the frontend's exact origin — scheme, host
+  **and** port. `http://localhost:3000` and `http://127.0.0.1:3000` are
+  different origins to a browser.
+- **The API URL is baked in at build time.** Expo inlines `app.json` `extra`
+  into the bundle, so every environment needs its own build. This is the real
+  cost, and it's easy to miss until you have more than one environment.
+
+## Build shape
+
+Multi-stage: build with Node, ship without it.
+
+1. **Build stage** — a Node image, `npm ci`, then
+   `npx expo export --platform web`. Output lands in `dist/`.
+2. **Serve stage** — a static server (nginx or similar) with **only** `dist/`
+   copied in. No `node_modules` (434 MB), no source.
+
+`.dockerignore` in `crew-logger-app/` already excludes `node_modules/`,
+`.expo/` and `dist/`, so the build context stays small and the image builds
+`dist/` fresh rather than copying a stale local one.
+
+A local `dist/` already exists from a prior export, which confirms the export
+step works here.
+
+## Running on a phone
+
+Expo Go on a physical device is a third case, and neither topology above
+applies — the phone is on your LAN, not on Docker's network and not on your
+machine:
+
+1. The API must bind `0.0.0.0`, not `127.0.0.1`. It currently binds loopback
+   only, so nothing outside the machine can reach it.
+2. `apiBaseUrl` must be the machine's **LAN IP** (e.g.
+   `http://192.168.1.50:8000`). `localhost` on a phone means the phone.
+3. That origin must be in `CORS_ORIGINS`.

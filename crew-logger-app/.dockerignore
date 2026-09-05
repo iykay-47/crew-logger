@@ -1,0 +1,45 @@
+# Version control
+.git/
+.gitignore
+
+# Dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native (generated)
+/ios
+/android
+.kotlin/
+
+# Build/debug output
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.tsbuildinfo
+
+# Env / secrets
+.env
+.env*.local
+
+# Docs, not needed at build/runtime
+docs/
+features/
+README.md
+CLAUDE.md
+AGENTS.md
+LICENSE
+
+# Docker files themselves
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Editor/OS cruft
+.vscode/
+.idea/
+.DS_Store

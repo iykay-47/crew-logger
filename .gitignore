@@ -1,5 +1,43 @@
+# ---- Python / backend (crew-logger-api) ----
 venv/
 __pycache__/
 *.pyc
-.env
 .pytest_cache/
+
+# ---- Node / Expo frontend (crew-logger-app) ----
+node_modules/
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+.metro-health-check*
+
+# Generated native folders (Expo prebuild)
+crew-logger-app/ios/
+crew-logger-app/android/
+.kotlin/
+
+# ---- Secrets — never commit ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.jks
+*.p8
+*.p12
+*.mobileprovision
+*.orig.*
+
+# ---- Debug output ----
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# ---- TypeScript ----
+*.tsbuildinfo
+
+# ---- Editor / OS ----
+.vscode/
+.idea/
+.DS_Store

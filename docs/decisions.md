@@ -1,0 +1,214 @@
+# Decisions
+
+Why this codebase is the way it is. Written for whoever (or whatever) picks
+this up cold — the reasoning behind a choice is rarely visible in the code
+that results from it, and reconstructing it from scratch tends to produce
+plausible-sounding wrong answers.
+
+Each entry: the decision, why, and where it's enforced.
+
+---
+
+## Data model
+
+### One shared `jobs` row per run, co-owned by the crew
+Run data (stations, times, miles, consist) is stored **once**, on a single
+`jobs` row that both crewmates read and edit. It is not duplicated per person.
+
+**Why:** duplicated run data drifts. If each crew member held their own copy of
+"this run was 112.72 miles," the two copies can disagree, and then nothing can
+say which is right. Storing it once makes disagreement structurally impossible.
+
+**Enforced in:** `app/models/database.py` (`Job`), `docs/data-model.md`.
+
+### `claims` (JSONB) is the only genuinely per-person data
+`participation` holds crew membership and each person's own `claims`. Nothing
+else.
+
+**Why:** an earlier draft put `hours` and `miles` on `participation`. Those are
+facts about the *run*, identical for everyone on it — so they moved to `jobs`.
+What remains per-person is claims, which genuinely differ between crew members.
+
+**Consequence:** `participation` is deliberately tiny. That is correct, not an
+oversight.
+
+### `train_id` is deliberately not unique
+The same run designator recurs on different dates — `SG83251-04` on January 5th
+and again in March are unrelated runs. `job_id` (a UUID) is the only key.
+
+**Why:** this is how railroad run designators actually work.
+`docs/data-model.md` states it explicitly: "Not unique across dates."
+
+**Do not** add a unique constraint on `train_id`, or on `train_id` +
+`record_date`, without reading the "Known gap" section below first.
+
+### `job_number` was dropped
+An early spec required a `job_number` field. The schema never had one; the
+identifier is `train_id`. Confirmed as stale naming, not a missing field, and
+removed from the specs.
+
+### `start_time` is a separate column from `on_duty`
+**This one was nearly a silent data-loss bug.** `docs/data-model.md` originally
+claimed `on_duty` "was also start_time — same value, one field," and the import
+spec said "start_time is not imported (equals on_duty)."
+
+The actual data disproves it: across the 74 historic records, `start_time` is
+**15 minutes later than `on_duty` on 64 of them**, and equal on only 10.
+Building to the original spec would have discarded a real field on 86% of
+records — silently, with no error.
+
+**Lesson worth generalizing:** the specs were written from memory; the CSV was
+ground truth. Check data before building a schema that assumes something about
+it.
+
+### Blank → NULL, never 0
+An empty source value means *not recorded*. Zero is a real measurement.
+
+**Why:** conflating them corrupts every average computed later. 22 of the 74
+records have a blank `cars` value; storing those as `0` would silently drag down
+any mean car count.
+
+**Enforced in:** `scripts/import_historic.py` (`_or_none`).
+
+---
+
+## Schema mechanics
+
+### UUID primary keys on all four tables
+**Why:** Phase 5 is offline sync. A phone with no connection must be able to
+create a job record and generate its own `job_id` immediately, with no server
+round-trip and no risk of colliding with an ID minted elsewhere. Sequential
+integers can't do that. It also guarantees historic-import IDs never collide
+with live entry.
+
+**Cost accepted:** larger index, less readable in logs than `1, 2, 3`.
+
+### `work_minutes` is a Postgres *generated* column
+It is computed by the database as `off_duty - on_duty` in minutes, on write.
+It is never sent by a client and never computed in Python.
+
+**Why — the "facts vs. derivations" principle** (`docs/data-model.md`): the
+database stores facts, not interpretations. The one exception is a derivation
+the *database itself* computes from stored facts, because it then cannot drift
+from its inputs. A hand-entered or app-computed total can silently disagree with
+the times it supposedly came from; a generated column cannot.
+
+**This is enforced by Postgres, not by convention** — an `INSERT` supplying
+`work_minutes` is rejected outright:
+```
+ERROR: cannot insert a non-DEFAULT value into column "work_minutes"
+DETAIL: Column "work_minutes" is a generated column.
+```
+Verified. It's also rollover-safe: `on_duty`/`off_duty` are full timestamps, so
+a run from 20:45 to 02:30 the next day correctly yields 345 minutes.
+
+### Enum columns store lowercase *values*, not member names
+`SAEnum(..., values_callable=lambda e: [m.value for m in e])`.
+
+**Why:** without `values_callable`, SQLAlchemy creates the Postgres enum from
+the Python member **names** — `DRAFT`, `SUBMITTED` — while the application, the
+docs, and the import all use `draft`, `submitted`. Every write would have been
+rejected by the database.
+
+**Caught by reading the generated migration before applying it.** Worth
+repeating: autogenerated migrations are a draft, not an output to trust blindly.
+
+### Delete cascades are declared on the ORM relationships
+`cascade="all, delete-orphan"` on `Job.participation` and `Job.job_edits`.
+
+**Why:** without it, deleting a job made SQLAlchemy try to `UPDATE
+participation SET job_id = NULL` — on a `NOT NULL` column — producing a 500.
+`job_edits` had no relationship at all and would have hit the FK's `RESTRICT`
+next.
+
+**Note the asymmetry:** this cascade is an *ORM-level* behaviour. A raw
+`DELETE FROM jobs` in psql still hits the database's `RESTRICT` and fails; child
+rows must be deleted first. Both behaviours are intentional — the API is
+permitted to delete a draft and its history; ad-hoc SQL is not, by accident.
+
+---
+
+## Process and phasing
+
+### Writes shipped in Phase 1; the state machine waits for Phase 3
+Phase 1 includes `POST`/`PUT`, but no confirmation loop, no notify, no locking.
+
+**Why:** the historic import already required write logic in `services/`, so
+exposing it over HTTP was an increment rather than a new subsystem. Deferring
+writes entirely would also have blocked the frontend's own Phase 1 (its entry
+form needs somewhere to POST).
+
+### `job_edits` is written from day one
+Every `POST` and `PUT` writes a `job_edits` row (who, when, what changed, before
+and after) inside the same transaction as the change itself.
+
+**Why:** Phase 3's edit/notify/confirm loop is built *on* the audit trail. Having
+it from the first write means Phase 3 layers onto correct history instead of
+retrofitting one — retrofitted audit logs are always missing the past.
+
+### Disagreement is a counter-edit, not a dispute endpoint
+A crewmate who disagrees edits the record. That edit logs to `job_edits` and
+notifies back. There is no `POST /dispute`.
+
+**Open consequence:** this makes the `disputed` value in the status enum
+unreachable — nothing transitions into it. Either drop it from the enum or add
+an explicit dispute action. Tracked in `features/confirmation-api.md`.
+
+---
+
+## Environment and tooling
+
+### `bcrypt` is pinned below 4.1
+`passlib` 1.7.4 (its final release) detects its bcrypt backend by reading
+`bcrypt.__about__.__version__`, which `bcrypt` removed in 4.1. Unpinned, every
+password hash fails — and it surfaces as a *misleading* error
+(`ValueError: password cannot be longer than 72 bytes`) from passlib's fallback
+path, not as the underlying `AttributeError`.
+
+Known upstream incompatibility, not a bug here. Blocks Phase 2 auth entirely if
+unpinned.
+
+### Config uses `python-dotenv` + `os.environ`, not `pydantic-settings`
+Pydantic v2 moved `BaseSettings` into a separate `pydantic-settings` package,
+which isn't a dependency here — and `CLAUDE.md` forbids adding packages
+unasked.
+
+`os.environ["..."]` (bracket, not `.get()`) is deliberate: a missing variable
+raises `KeyError` at import and the process dies immediately, rather than
+failing confusingly at first request.
+
+### Tests run against the real dev database, isolated by SAVEPOINT
+`tests/conftest.py` wraps each test in an outer transaction with
+`join_transaction_mode="create_savepoint"`, then rolls back at teardown.
+
+**Why:** the application code calls `db.commit()` internally on every write, so
+a naive fixture would persist test data. The savepoint mechanism absorbs those
+commits without ending the outer transaction. This avoids provisioning a second
+Postgres database while still letting tests hit real endpoints against the real
+74-row dataset.
+
+**Verified non-destructive:** `count(*) from jobs` is 74 before and after a full
+run.
+
+---
+
+## Known gap
+
+### No merge logic when two crew members log the same run
+`POST /entries` **always** creates a new `jobs` row. There is no check against
+existing records. Verified live.
+
+This contradicts the co-owned-`jobs` model: two crew members on one run should
+share **one** `jobs` row with **two** `participation` rows. Today they'd get two
+disconnected records, which breaks the confirmation workflow Phase 3 is built
+on.
+
+**It is not simply "duplicate `train_id`"** — that's normal and expected across
+dates. The real signal is `record_date` + `on_duty` + overlapping crew.
+
+The historic import never hit this because no two of the 74 records share
+`train_id` + `record_date` (checked). So the merge path has never needed to
+exist. Phase 3 must decide: match at submit time and merge, or detect and
+reconcile afterward.
+
+Tracked in `features/confirmation-api.md`.

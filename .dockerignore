@@ -1,0 +1,31 @@
+# Version control
+.git/
+.gitignore
+
+# Python
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Not copied into the image, no need in build context
+tests/
+docs/
+features/
+README.md
+CLAUDE.md
+
+# Docker files themselves
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Editor/OS cruft
+.vscode/
+.idea/
+.DS_Store

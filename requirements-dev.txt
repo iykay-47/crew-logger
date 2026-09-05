@@ -1,0 +1,10 @@
+# Development and test dependencies.
+# Installs the runtime set too, so this is the only file you need locally:
+#     pip install -r requirements-dev.txt
+#
+# Production images should install requirements.txt only — see docs/deployment.md.
+
+-r requirements.txt
+
+pytest
+httpx  # required by FastAPI's TestClient

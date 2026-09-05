@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+alembic
+psycopg2-binary
+pydantic
+passlib[bcrypt]
+bcrypt<4.1  # passlib 1.7.4 (last release) can't detect bcrypt's backend on >=4.1 — see README
+python-jose[cryptography]
+python-dotenv

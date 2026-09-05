@@ -1,13 +1,18 @@
 # Crew Logger API (Backend)
 
 Python/FastAPI backend for the Crew Logger app. Receives requests from the
-Expo frontend (`crew-logger`), enforces business rules, and talks to
+Expo frontend (`crew-logger-app`), enforces business rules, and talks to
 Postgres. See `CLAUDE.md` for architecture rules and `features/` for what
-each endpoint group does. Currently in **Phase 1**: the `jobs`/`participation`/
-`job_edits`/`users` models, the historic import (74 PSTS562 records), and the
-entries + participation endpoints are built and tested. No auth yet
-(Phase 2) and no confirmation state machine (Phase 3) — every write happens
-as `source=app_entry`, `status=submitted`, no locking.
+each endpoint group does.
+
+**Built:** the `jobs`/`participation`/`job_edits`/`users` models, the historic
+import (74 PSTS562 records), entries + participation CRUD, and the reports
+endpoints — all tested. **Not built:** auth (anyone reaching the API can read
+and write everything) and the confirmation state machine, so every write lands
+as `status=submitted` with no locking.
+
+For starting the database, API and frontend together, see the root
+[`README.md`](../README.md).
 
 ## Requirements
 

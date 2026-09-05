@@ -2,8 +2,14 @@
 
 Expo (React Native + TypeScript) app for small field crews to log job entries.
 See `CLAUDE.md` for architecture rules and `features/` for what each screen
-does. Currently in **Phase 1** — placeholder screens only, no business logic
-built yet.
+does.
+
+**Dashboard and History are built** — they show summary totals and the trip
+list, read-only, fetched from `crew-logger-api`. New Entry and Settings are
+still placeholders, and there is no login yet.
+
+**The API must be running** for either screen to show anything. See the root
+[`README.md`](../README.md) for starting everything together.
 
 ## Requirements
 
@@ -20,14 +26,31 @@ built yet.
   yarn/pnpm (`package-lock.json` is the lockfile).
 - No native Android/iOS SDKs are required to run in web or Expo Go mode.
 
-## Environment files
+## Configuring the API URL
 
-None currently. This app has no `.env` file yet — the backend API base URL
-(`services/api.ts`) is not wired up to an environment variable at this
-phase. When that's added, per `docs/architecture.md` the dev default backend
-is `http://localhost:8000`, and any client-readable env var must be prefixed
-`EXPO_PUBLIC_` (e.g. `EXPO_PUBLIC_API_URL`) to be visible in the bundled app —
-plain env vars are not exposed to client code in Expo.
+No `.env` file. The backend URL lives in `app.json` under `extra.apiBaseUrl`,
+read by `services/api.ts` through `expo-constants`:
+
+```json
+"extra": { "apiBaseUrl": "http://localhost:8000" }
+```
+
+Change it per environment:
+
+| Running where | Value |
+|---|---|
+| Browser on this machine | `http://localhost:8000` (default) |
+| Phone via Expo Go | `http://<this-machine's-LAN-IP>:8000` |
+| Behind a reverse proxy | `/api` — same origin, so no CORS |
+
+**Running on a physical phone needs two more things:** the API must bind
+`0.0.0.0` instead of `127.0.0.1` (it currently binds loopback only, so nothing
+off this machine can reach it), and that origin must be listed in the API's
+`CORS_ORIGINS`. `localhost` on a phone means the phone itself.
+
+Note this value is **inlined into the bundle at build time**, so a static web
+build is tied to whatever URL it was built with — one reason the reverse-proxy
+setup is easier to deploy. See [`../docs/deployment.md`](../docs/deployment.md).
 
 ## Start-up
 
@@ -47,8 +70,17 @@ npx tsc --noEmit    # type-check
 npx expo start --web
 curl -sf http://localhost:8081 >/dev/null && echo OK
 ```
-You should see the Dashboard tab with placeholder text, and a bottom tab bar
-with Dashboard / New Entry / History / Settings.
+
+With the API running, the Dashboard shows all-time / weekly / per-month
+totals, and History lists every trip newest-first.
+
+If instead you see **"Couldn't load data — Can't reach the API"**, the backend
+isn't running. Start it (see the root README) and press *Try again*.
+
+Note `npx tsc --noEmit` reports one pre-existing error in
+`components/ExternalLink.tsx`, which came from the Expo starter template. It
+doesn't affect the running app — Metro strips types with Babel rather than
+`tsc`.
 
 ## Project structure
 

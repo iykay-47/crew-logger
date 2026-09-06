@@ -42,10 +42,12 @@ features are deferred, not cancelled, and the schema stays crew-ready.
 - **Phase 1 — done.** Models (`jobs`, `participation`, `job_edits`, `users`),
   historic import (74 records, employee 196035), entry CRUD. Every write logs
   to `job_edits`.
-- **Phase 2 — current.** Viewing and summaries: reports endpoints on the
+- **Phase 2 — done.** Viewing and summaries: reports endpoints on the
   backend, read-only dashboard and history screens on the frontend.
-- **Phase 3.** Deploy on Docker.
-- **Phase 4.** Entry form — log new runs, not just historic ones.
+- **Phase 3 — done.** Entry form — the frontend can log new runs, not just
+  historic ones. Data path verified end-to-end; browser walkthrough of the
+  rendered form still outstanding (see `crew-logger-app/features/new-entry.md`).
+- **Phase 4 — current.** Deploy on Docker.
 - **Phase 5.** Image upload and storage.
 - **Phase 6.** Offline support.
 - **Phase 7.** OCR extraction from job tickets.

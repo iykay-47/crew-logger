@@ -128,10 +128,11 @@ then to the form.
   rollover mistake is visible before submitting.
 
 ## Phase
-Phase 4 — the entry form. Reports and viewing (Phase 2) come first, and
-deployment (Phase 3) after that.
+Done — the entry form. Built after viewing/summaries; deployment is next. See
+the phase list in the root `CLAUDE.md` (the single source of truth for phase
+order).
 
-Requires no backend work: `POST /entries` is built, tested, and logs every
+Required no backend work: `POST /entries` is built, tested, and logs every
 write to `job_edits`.
 
 ## Definition of done

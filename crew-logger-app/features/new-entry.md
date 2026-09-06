@@ -135,14 +135,26 @@ Requires no backend work: `POST /entries` is built, tested, and logs every
 write to `job_edits`.
 
 ## Definition of done
-- [ ] All fields above render and accept input
+
+Verified end-to-end against the live API:
+- [x] Blank optional fields send `null`, never `0` or `""`
+- [x] Times crossing midnight produce the correct next-day timestamp —
+      13 cases pass, including both real rollover records (`L56651-09` 345 min,
+      `L44252-10` 590 min), a same-day run that must *not* gain a day, and
+      month/year/leap-day boundaries
+- [x] The live duration matches what the API returns after saving —
+      a rollover run displayed 345 min and the database computed 345
+- [x] A `job_edits` row is written on create (10 fields recorded)
+- [x] Both API error shapes render readable text, never `[object Object]` —
+      our string `detail` and Pydantic's list `detail`
+
+Built but not yet confirmed in a browser (the automation extension was
+disconnected; the route compiles and serves 200):
+- [ ] All fields render and accept input
 - [ ] `record_date` defaults to today
 - [ ] `train_id` is required; empty submission is blocked before the request
-- [ ] Blank optional fields send `null`, never `0` or `""`
-- [ ] Times crossing midnight produce the correct next-day timestamp
-- [ ] The live duration matches what the API returns after saving
 - [ ] Future `record_date`, negative `run_miles`, and `off_duty` before
-      `on_duty` are all rejected with the API's message shown
+      `on_duty` each show the API's message
 - [ ] Submit is disabled while in flight
 - [ ] Success navigates to History and the new entry is visible
 - [ ] Failure preserves everything the user typed

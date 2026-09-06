@@ -26,6 +26,47 @@ export class ApiError extends Error {
   }
 }
 
+const UNREACHABLE = `Can't reach the API at ${BASE_URL}. Is the backend running?`;
+
+/**
+ * Turn an error response body into one readable sentence.
+ *
+ * FastAPI returns `detail` in two different shapes and both reach us:
+ *   - a plain string, from our own HTTPException(detail=str(e)) — the
+ *     business rules in app/services/entries.py
+ *   - a list of objects, from Pydantic's own request validation
+ *
+ * Rendering the list directly gives the user "[object Object]", so flatten
+ * it, prefixing each message with the field it came from.
+ */
+async function describeError(response: Response, path: string): Promise<string> {
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch {
+    return `Request to ${path} failed (${response.status})`;
+  }
+
+  const detail = (body as { detail?: unknown })?.detail;
+
+  if (typeof detail === 'string') return detail;
+
+  if (Array.isArray(detail)) {
+    const messages = detail
+      .map((item) => {
+        const { loc, msg } = (item ?? {}) as { loc?: unknown[]; msg?: string };
+        if (!msg) return null;
+        // loc looks like ["body", "run_miles"] — the last entry is the field.
+        const field = Array.isArray(loc) ? loc[loc.length - 1] : undefined;
+        return field && field !== 'body' ? `${field}: ${msg}` : msg;
+      })
+      .filter(Boolean);
+    if (messages.length) return messages.join('\n');
+  }
+
+  return `Request to ${path} failed (${response.status})`;
+}
+
 export async function get<T>(path: string): Promise<T> {
   let response: Response;
 
@@ -35,16 +76,31 @@ export async function get<T>(path: string): Promise<T> {
     // fetch only rejects on network-level failures — server down, DNS,
     // blocked by CORS. This is the most likely error in practice, so it
     // gets a message that points at the actual cause.
-    throw new ApiError(
-      `Can't reach the API at ${BASE_URL}. Is the backend running?`,
-    );
+    throw new ApiError(UNREACHABLE);
   }
 
   if (!response.ok) {
-    throw new ApiError(
-      `Request to ${path} failed (${response.status})`,
-      response.status,
-    );
+    throw new ApiError(await describeError(response, path), response.status);
+  }
+
+  return (await response.json()) as T;
+}
+
+export async function post<T>(path: string, body: unknown): Promise<T> {
+  let response: Response;
+
+  try {
+    response = await fetch(`${BASE_URL}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new ApiError(UNREACHABLE);
+  }
+
+  if (!response.ok) {
+    throw new ApiError(await describeError(response, path), response.status);
   }
 
   return (await response.json()) as T;

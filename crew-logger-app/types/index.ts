@@ -62,6 +62,38 @@ export interface Job {
   participation: Participation[];
 }
 
+/**
+ * Body for POST /entries — exactly the fields the API's JobCreate accepts.
+ *
+ * Do not add anything else. The API **silently discards** unknown fields
+ * rather than rejecting them (verified: posting `axles` returns 201 and the
+ * value vanishes), so a stray key fails invisibly. In particular never send
+ * `work_minutes` (computed by the database), `status`, or `source` (both set
+ * by the server).
+ *
+ * `edited_by` exists only because there is no auth yet; Phase 2 replaces it
+ * with the identity from the JWT.
+ */
+export interface JobCreatePayload {
+  train_id: string;
+  record_date: string; // YYYY-MM-DD
+  edited_by: string;
+
+  original_train_id: string | null;
+  origin_station: string | null;
+  final_station: string | null;
+
+  start_time: string | null;
+  on_duty: string | null;
+  initial_os: string | null;
+  final_os: string | null;
+  off_duty: string | null;
+
+  run_miles: number | null;
+  train_length: number | null;
+  cars: number | null;
+}
+
 /** One period's totals from the reports endpoints.
  *  Minutes are raw — formatting to "7h 30m" is this app's job. */
 export interface ReportPeriod {

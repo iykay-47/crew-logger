@@ -20,8 +20,8 @@ Both halves live in one repo:
 - Backend: `uvicorn app.main:app --reload` on `:8000`
 - Postgres: Docker, `:5432`
 - Frontend: `npx expo start --web` (dev server on `:8081`)
-- Base URL comes from `app.json` `extra` via `expo-constants`, defaulting to
-  `http://localhost:8000`
+- Base URL comes from `EXPO_PUBLIC_API_URL` in `.env`, defaulting to
+  `http://localhost:8000` (only `EXPO_PUBLIC_`-prefixed vars reach client code)
 
 Because the dev server (`:8081`) and API (`:8000`) are different origins, the
 backend must send CORS headers for browser requests to succeed.

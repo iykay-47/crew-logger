@@ -108,11 +108,12 @@ venv/bin/python -m scripts.import_historic
 ## Current state
 
 **Built:** the four tables, the historic import, entry CRUD with full edit
-logging, summary endpoints, and read-only Dashboard/History screens.
+logging, summary endpoints, Dashboard and History screens, and the New Entry
+form (all 23 job fields, with times that cross midnight handled correctly).
 
 **Not built:** logging in (no auth — anyone reaching the API can read and write
-everything), the confirmation workflow, the new-entry form, photos, offline
-support, OCR.
+everything), the confirmation workflow, the Settings screen, entry detail on
+tap, photos, offline support, OCR.
 
 Scoped to a **single user** for now. Crew features are deferred, not cancelled —
 the schema is already crew-ready. See the build phases in

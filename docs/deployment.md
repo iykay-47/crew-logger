@@ -288,7 +288,7 @@ production.
 So this can never work, no matter how correct it looks:
 
 ```
-apiBaseUrl = "http://api:8000"     # WRONG from a browser
+EXPO_PUBLIC_API_URL=http://api:8000     # WRONG from a browser
 ```
 
 `api` is a Docker service name. Docker's DNS resolves it only *inside* the
@@ -315,7 +315,7 @@ browser ──> nginx ─┬─> static files  (/)
 The proxy *is* inside the Docker network, so `http://api:8000` works there —
 that's the difference from the browser case above.
 
-Set `apiBaseUrl` to the relative path `/api`. Then:
+Set `EXPO_PUBLIC_API_URL` to the relative path `/api`. Then:
 
 - **No CORS at all** — same origin, so the browser never does a cross-origin
   check. `CORS_ORIGINS` becomes irrelevant.
@@ -334,9 +334,31 @@ Frontend and API published on different ports; the browser calls
 - Requires `CORS_ORIGINS` to list the frontend's exact origin — scheme, host
   **and** port. `http://localhost:3000` and `http://127.0.0.1:3000` are
   different origins to a browser.
-- **The API URL is baked in at build time.** Expo inlines `app.json` `extra`
-  into the bundle, so every environment needs its own build. This is the real
-  cost, and it's easy to miss until you have more than one environment.
+- **The API URL is baked in at build time.** Expo inlines `EXPO_PUBLIC_*`
+  values into the bundle when it builds, so every environment needs its own
+  build. This is the real cost, and it's easy to miss until you have more than
+  one environment. (Topology A avoids it entirely: a relative `/api` is
+  correct everywhere, so one artefact serves all environments.)
+
+## Frontend configuration is build-time, not runtime
+
+The app reads config from `EXPO_PUBLIC_*` environment variables (see
+`crew-logger-app/.env.example`):
+
+| Variable | Purpose |
+|---|---|
+| `EXPO_PUBLIC_API_URL` | Backend base URL |
+| `EXPO_PUBLIC_EMPLOYEE_NUMBER` | Whose entries these are (temporary, until Phase 2 auth) |
+
+**Only `EXPO_PUBLIC_`-prefixed vars reach client code.** `app.json` `extra`
+read through `expo-constants` does *not* work here — verified:
+`Constants.expoConfig.extra` is `null` on Expo web. An earlier version of this
+project used `extra` and the config silently arrived empty.
+
+The build-time part matters for Docker: these values are **inlined into the
+static bundle** by `expo export`, so they must be present as environment
+variables **in the build stage**, not injected when the container starts.
+Changing one means rebuilding the image, not restarting it.
 
 ## Build shape
 
@@ -362,6 +384,6 @@ machine:
 
 1. The API must bind `0.0.0.0`, not `127.0.0.1`. It currently binds loopback
    only, so nothing outside the machine can reach it.
-2. `apiBaseUrl` must be the machine's **LAN IP** (e.g.
+2. `EXPO_PUBLIC_API_URL` must be the machine's **LAN IP** (e.g.
    `http://192.168.1.50:8000`). `localhost` on a phone means the phone.
 3. That origin must be in `CORS_ORIGINS`.

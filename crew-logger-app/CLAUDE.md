@@ -24,13 +24,19 @@ frontend-local rules.
 - `fetch` is built in — no HTTP client package needed
 - No charting library installed
 
-## API base URL
-Configured via `app.json` `extra`, read through `expo-constants`. Defaults to
-`http://localhost:8000` for browser-on-this-machine development.
+## Configuration
+`EXPO_PUBLIC_*` environment variables in `.env` (see `.env.example`):
+`EXPO_PUBLIC_API_URL` and `EXPO_PUBLIC_EMPLOYEE_NUMBER`.
 
-Running on a **physical phone** needs two changes: the API must bind `0.0.0.0`
-instead of `127.0.0.1`, and this value must point at the machine's LAN IP.
-See `../docs/deployment.md`.
+**Only `EXPO_PUBLIC_`-prefixed vars reach client code.** Do not use `app.json`
+`extra` via `expo-constants` — `Constants.expoConfig.extra` is `null` on Expo
+web, so config set that way arrives empty with no error.
+
+These are read at bundle time: **restart the dev server after changing them.**
+
+Running on a **physical phone** needs two more changes: the API must bind
+`0.0.0.0` instead of `127.0.0.1`, and `EXPO_PUBLIC_API_URL` must point at the
+machine's LAN IP. See `../docs/deployment.md`.
 
 ## Feature specs
 Each feature is defined in `features/`. Read the relevant file before building.

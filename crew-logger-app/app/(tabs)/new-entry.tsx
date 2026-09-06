@@ -4,7 +4,6 @@
 // the run, not the person entering it; crew membership and per-person claims
 // are separate and not part of this form.
 
-import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet } from 'react-native';
@@ -18,9 +17,9 @@ import { formatMinutes } from '@/utils/format';
 
 /** Until auth exists (Phase 2), the client must say who this is. It lives in
  *  config rather than on the form — a crew member shouldn't retype their
- *  employee number for every run. */
-const EMPLOYEE_NUMBER =
-  (Constants.expoConfig?.extra?.employeeNumber as string | undefined) ?? '';
+ *  employee number for every run. Read from an EXPO_PUBLIC_ var because that
+ *  is the only client-readable config channel on Expo web (see .env.example). */
+const EMPLOYEE_NUMBER = process.env.EXPO_PUBLIC_EMPLOYEE_NUMBER ?? '';
 
 const EMPTY = {
   train_id: '',

@@ -149,13 +149,17 @@ Verified end-to-end against the live API:
 - [x] Both API error shapes render readable text, never `[object Object]` —
       our string `detail` and Pydantic's list `detail`
 
-Built but not yet confirmed in a browser (the automation extension was
-disconnected; the route compiles and serves 200):
-- [ ] All fields render and accept input
-- [ ] `record_date` defaults to today
-- [ ] `train_id` is required; empty submission is blocked before the request
+Confirmed in a browser against the live API:
+- [x] All fields render and accept input
+- [x] `record_date` defaults to today
+- [x] `train_id` is required; empty submission is blocked before the request
+- [x] Success navigates to History and the new entry is visible at the top
+      (a rollover run showed 5h 45m and persisted as `off_duty` on the next
+      calendar day, `work_minutes` 345)
+- [x] `edited_by` comes from `EXPO_PUBLIC_EMPLOYEE_NUMBER`, not the form
+
+Still unconfirmed in-browser (verified only via direct API calls so far):
 - [ ] Future `record_date`, negative `run_miles`, and `off_duty` before
       `on_duty` each show the API's message
 - [ ] Submit is disabled while in flight
-- [ ] Success navigates to History and the new entry is visible
 - [ ] Failure preserves everything the user typed

@@ -10,11 +10,11 @@
 //
 // React Native and browsers both provide fetch, so there's no HTTP package.
 
-import Constants from 'expo-constants';
-
-const BASE_URL =
-  (Constants.expoConfig?.extra?.apiBaseUrl as string | undefined) ??
-  'http://localhost:8000';
+// Expo exposes only EXPO_PUBLIC_-prefixed env vars to client code. app.json
+// `extra` (via expo-constants) does NOT populate on web in this setup —
+// verified: Constants.expoConfig.extra is null there — so config lives in
+// EXPO_PUBLIC_* vars (see .env.example).
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8000';
 
 export class ApiError extends Error {
   constructor(

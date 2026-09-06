@@ -26,16 +26,20 @@ still placeholders, and there is no login yet.
   yarn/pnpm (`package-lock.json` is the lockfile).
 - No native Android/iOS SDKs are required to run in web or Expo Go mode.
 
-## Configuring the API URL
+## Configuration
 
-No `.env` file. The backend URL lives in `app.json` under `extra.apiBaseUrl`,
-read by `services/api.ts` through `expo-constants`:
+Config lives in `.env` (copy `.env.example`). Expo exposes **only** vars
+prefixed `EXPO_PUBLIC_` to client code — `app.json` `extra` via `expo-constants`
+does not populate on web in this setup (verified: `Constants.expoConfig.extra`
+is `null` there). The dev server reads `.env` at bundle time, so **restart it
+after changing these**.
 
-```json
-"extra": { "apiBaseUrl": "http://localhost:8000" }
-```
+| Variable | Purpose |
+|---|---|
+| `EXPO_PUBLIC_API_URL` | Backend base URL |
+| `EXPO_PUBLIC_EMPLOYEE_NUMBER` | Whose entries these are (temporary; Phase 2 auth replaces it with the JWT identity) |
 
-Change it per environment:
+`EXPO_PUBLIC_API_URL` per environment:
 
 | Running where | Value |
 |---|---|

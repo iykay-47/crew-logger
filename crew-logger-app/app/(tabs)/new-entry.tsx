@@ -12,7 +12,12 @@ import FormField from '@/components/FormField';
 import { Text, View } from '@/components/Themed';
 import { createEntry } from '@/services/entries';
 import type { JobCreatePayload } from '@/types';
-import { buildTimestamps, durationMinutes, isValidDate } from '@/utils/datetime';
+import {
+  buildStandaloneTimestamp,
+  buildTimestamps,
+  durationMinutes,
+  isValidDate,
+} from '@/utils/datetime';
 import { formatMinutes } from '@/utils/format';
 
 /** Until auth exists (Phase 2), the client must say who this is. It lives in
@@ -30,11 +35,20 @@ const EMPTY = {
   start_time: '',
   initial_os: '',
   final_os: '',
+  release_care_control: '',
   off_duty: '',
   run_miles: '',
   train_length: '',
   cars: '',
   original_train_id: '',
+  axles: '',
+  lead_unit: '',
+  trailing_units: '',
+  dp_units: '',
+  rx_rtc: '',
+  rx_mile_point: '',
+  rx_time: '',
+  rest: '',
 };
 
 /** Blank means "not recorded" — null, never 0 or "". Zero is a real
@@ -79,7 +93,7 @@ export default function NewEntryScreen() {
     if (!validate()) return;
 
     if (!EMPLOYEE_NUMBER) {
-      setError('No employee number configured (app.json → extra.employeeNumber).');
+      setError('No employee number configured (set EXPO_PUBLIC_EMPLOYEE_NUMBER in .env).');
       return;
     }
 
@@ -102,6 +116,16 @@ export default function NewEntryScreen() {
       run_miles: numberOrNull(form.run_miles),
       train_length: numberOrNull(form.train_length),
       cars: numberOrNull(form.cars),
+      axles: textOrNull(form.axles),
+      lead_unit: textOrNull(form.lead_unit),
+      trailing_units: textOrNull(form.trailing_units),
+      dp_units: textOrNull(form.dp_units),
+      release_care_control: times.release_care_control,
+      rx_rtc: textOrNull(form.rx_rtc),
+      rx_mile_point: textOrNull(form.rx_mile_point),
+      // Standalone: not in the ordered sequence, so anchored to on_duty.
+      rx_time: buildStandaloneTimestamp(form.record_date, form.rx_time, form.on_duty),
+      rest: numberOrNull(form.rest),
     };
 
     setSubmitting(true);
@@ -166,6 +190,7 @@ export default function NewEntryScreen() {
       <FormField label="Start" value={form.start_time} onChangeText={set('start_time')} hint="HH:MM" placeholder="15:30" />
       <FormField label="Initial OS" value={form.initial_os} onChangeText={set('initial_os')} hint="HH:MM" />
       <FormField label="Final OS" value={form.final_os} onChangeText={set('final_os')} hint="HH:MM" />
+      <FormField label="Release care control" value={form.release_care_control} onChangeText={set('release_care_control')} hint="HH:MM" />
       <FormField label="Off duty" value={form.off_duty} onChangeText={set('off_duty')} hint="HH:MM" placeholder="22:45" />
 
       {duration !== null ? (
@@ -182,6 +207,18 @@ export default function NewEntryScreen() {
       <FormField label="Train length" value={form.train_length} onChangeText={set('train_length')} keyboardType="number-pad" hint="feet" />
       <FormField label="Cars" value={form.cars} onChangeText={set('cars')} keyboardType="number-pad" />
       <FormField label="Original train" value={form.original_train_id} onChangeText={set('original_train_id')} hint="only if re-designated" />
+
+      <Text style={styles.heading}>Consist</Text>
+      <FormField label="Axles" value={form.axles} onChangeText={set('axles')} />
+      <FormField label="Lead unit" value={form.lead_unit} onChangeText={set('lead_unit')} />
+      <FormField label="Trailing units" value={form.trailing_units} onChangeText={set('trailing_units')} />
+      <FormField label="DP units" value={form.dp_units} onChangeText={set('dp_units')} hint="distributed power" />
+
+      <Text style={styles.heading}>RX</Text>
+      <FormField label="RX RTC" value={form.rx_rtc} onChangeText={set('rx_rtc')} />
+      <FormField label="RX mile point" value={form.rx_mile_point} onChangeText={set('rx_mile_point')} />
+      <FormField label="RX time" value={form.rx_time} onChangeText={set('rx_time')} hint="HH:MM" />
+      <FormField label="Rest" value={form.rest} onChangeText={set('rest')} keyboardType="number-pad" hint="whole numbers" />
 
       <Pressable
         onPress={onSubmit}

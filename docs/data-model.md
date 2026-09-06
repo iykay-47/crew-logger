@@ -38,15 +38,15 @@ All run data lives here. Both crewmates read and edit the same row.
 | `work_minutes` | `INTEGER` | Generated: off_duty - on_duty as minutes. Rollover-safe |
 | `train_length` | `INTEGER` | Feet |
 | `cars` | `SMALLINT` | Count |
-| `axles` | `VARCHAR` | Not in historic data. Match/count only |
-| `lead_unit` | `VARCHAR` | Not in historic data |
-| `trailing_units` | `VARCHAR` | Not in historic data |
-| `dp_units` | `VARCHAR` | Distributed power. Not in historic data |
-| `release_care_control` | `TIMESTAMP` | Not in historic data |
-| `rx_rtc` | `VARCHAR` | RX detail. Not in historic data |
-| `rx_mile_point` | `VARCHAR` | Text (final). Not in historic data |
-| `rx_time` | `TIMESTAMP` | RX detail. Not in historic data |
-| `rest` | `INTEGER` | Whole numbers only. Not in historic data |
+| `axles` | `VARCHAR` | NULL on all historic rows; collected via the entry form. Match/count only |
+| `lead_unit` | `VARCHAR` | NULL on all historic rows; collected via the entry form |
+| `trailing_units` | `VARCHAR` | NULL on all historic rows; collected via the entry form |
+| `dp_units` | `VARCHAR` | Distributed power. NULL on all historic rows; collected via the entry form |
+| `release_care_control` | `TIMESTAMP` | NULL on all historic rows; collected via the entry form |
+| `rx_rtc` | `VARCHAR` | RX detail. NULL on all historic rows; collected via the entry form |
+| `rx_mile_point` | `VARCHAR` | Text (final). NULL on all historic rows; collected via the entry form |
+| `rx_time` | `TIMESTAMP` | RX detail. Standalone timestamp, not in the on-duty/off-duty sequence. Collected via the entry form |
+| `rest` | `INTEGER` | Whole numbers only. NULL on all historic rows; collected via the entry form |
 
 **Lifecycle & edit tracking**
 

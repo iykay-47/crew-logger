@@ -39,6 +39,23 @@ All are full timestamps, not times-of-day. See "Times crossing midnight".
 | `final_os` | Last position report |
 | `off_duty` | When the crew went off duty. **Must be after `on_duty`** (rejected with 422). |
 
+### Optional — consist and RX detail
+
+Absent from every historic PSTS562 record (NULL on all 74 imported rows), so
+these are only ever populated by live entry.
+
+| Field | Type | Notes |
+|---|---|---|
+| `axles` | text | Match/count only — not used in calculation |
+| `lead_unit` | text | |
+| `trailing_units` | text | |
+| `dp_units` | text | Distributed power |
+| `rx_rtc` | text | |
+| `rx_mile_point` | text | Text by decision, not numeric |
+| `rest` | integer | Whole numbers only |
+| `release_care_control` | timestamp | **In the time sequence**, between `final_os` and `off_duty` |
+| `rx_time` | timestamp | **Standalone** — see below |
+
 ### Optional — measurements
 
 | Field | Type | Notes |
@@ -66,13 +83,18 @@ So the form cannot assume every time falls on `record_date`. The user enters a
 time of day; the app derives the date:
 
 - Times are ordered `on_duty` → `start_time` → `initial_os` → `final_os` →
-  `off_duty`.
+  `release_care_control` → `off_duty`.
 - Walking that order, whenever a time-of-day is **earlier** than the one
   before it, the day has rolled over — add a day.
 
 This assumes a shift is under 24 hours, which is safe for train crews (hours
 of service are legally capped well below that). State the assumption rather
 than hiding it.
+
+**`rx_time` is outside this sequence.** It has no fixed position relative to
+the other times, so it can't be placed by comparing it to neighbours. It is
+anchored to `on_duty` instead: a clock time earlier than `on_duty` is taken as
+the next day. With no `on_duty` entered, it falls on `record_date` as-is.
 
 Getting this wrong is not a cosmetic bug: `work_minutes` is computed from
 `off_duty - on_duty`, so a missed rollover produces a negative duration.
@@ -83,11 +105,12 @@ Getting this wrong is not a cosmetic bug: `work_minutes` is computed from
 existing user or the request is rejected (422). There is no login yet, so the
 app must supply it.
 
-**Recommended:** store the employee number in app config
-(`app.json` `extra`), the same pattern already used for `apiBaseUrl`. One
-value, no UI needed, and the Settings screen can expose it later. Phase 2
-replaces it entirely with the identity from the JWT — so this should live in
-exactly one place, not be threaded through the form.
+It comes from `EXPO_PUBLIC_EMPLOYEE_NUMBER` in `.env` — the same channel as
+`EXPO_PUBLIC_API_URL`. (Note `app.json` `extra` does **not** work for this:
+`Constants.expoConfig.extra` is `null` on Expo web, so only `EXPO_PUBLIC_`
+vars reach client code.) One value, no UI needed, and the Settings screen can
+expose it later. Phase 2 replaces it entirely with the identity from the JWT —
+so it lives in exactly one place rather than being threaded through the form.
 
 **Do not** make it a field on the form. It is not something a crew member
 should retype for every run, and it is not part of the run.
@@ -100,19 +123,20 @@ Do not add inputs for these:
   Postgres physically rejects any attempt to write it. The form may *display*
   the derived duration as live feedback, but must never submit it.
 - **`status`, `source`** — set by the server (`submitted`, `app_entry`).
-- **Consist and RX detail** (`axles`, `lead_unit`, `trailing_units`,
-  `dp_units`, `release_care_control`, `rx_rtc`, `rx_mile_point`, `rx_time`,
-  `rest`) — these columns exist in the database but are **not in the
-  `JobCreate` schema**. Their source is undecided
-  (`../docs/data-model.md`); adding them needs a backend change first.
+- **`job_id`, `created_at`, `updated_at`, `last_edited_by`, `last_edited_at`** —
+  server-generated.
 
-⚠️ **Unknown fields are silently discarded, not rejected.** Verified: posting
-`axles` returns **201 Created** and the value is dropped — the column stays
-`NULL`. Pydantic ignores extra fields by default. So a form input for any
-unlisted field would appear to work perfectly while the data quietly vanishes.
-That failure mode is worse than an error, because nothing surfaces it. If
-these fields are ever needed, add them to `JobCreate` on the backend **first**,
-then to the form.
+These are excluded permanently, unlike the consist/RX fields which were simply
+not yet wired up.
+
+⚠️ **Unknown fields are silently discarded, not rejected.** Pydantic ignores
+extra fields by default, so the API returns **201 Created** and the value is
+dropped — no error anywhere. A form input for any field not in `JobCreate`
+would appear to work perfectly while the data quietly vanished.
+
+This is why the consist/RX fields needed a backend change before the form
+could collect them: adding inputs alone would have silently lost every value.
+The order is always **`JobCreate` first, then the form.**
 
 ## Behavior
 
@@ -148,6 +172,10 @@ Verified end-to-end against the live API:
 - [x] A `job_edits` row is written on create (10 fields recorded)
 - [x] Both API error shapes render readable text, never `[object Object]` —
       our string `detail` and Pydantic's list `detail`
+- [x] All 9 consist/RX fields persist — verified through the form into the
+      database, with `release_care_control` rolling to the next day in its
+      sequence position and `rx_time` rolling independently via its `on_duty`
+      anchor
 
 Confirmed in a browser against the live API:
 - [x] All fields render and accept input

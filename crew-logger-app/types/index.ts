@@ -48,6 +48,18 @@ export interface Job {
   train_length: number | null;
   cars: number | null;
 
+  // Consist and RX detail. NULL on all 74 historic records (PSTS562 never
+  // captured them); collected from live entry going forward.
+  axles: string | null;
+  lead_unit: string | null;
+  trailing_units: string | null;
+  dp_units: string | null;
+  release_care_control: string | null;
+  rx_rtc: string | null;
+  rx_mile_point: string | null;
+  rx_time: string | null;
+  rest: number | null;
+
   /** Computed by the database from on_duty/off_duty. Read-only — the API
    *  rejects any attempt to write it. */
   work_minutes: number | null;
@@ -92,6 +104,16 @@ export interface JobCreatePayload {
   run_miles: number | null;
   train_length: number | null;
   cars: number | null;
+
+  axles: string | null;
+  lead_unit: string | null;
+  trailing_units: string | null;
+  dp_units: string | null;
+  release_care_control: string | null;
+  rx_rtc: string | null;
+  rx_mile_point: string | null;
+  rx_time: string | null;
+  rest: number | null;
 }
 
 /** One period's totals from the reports endpoints.

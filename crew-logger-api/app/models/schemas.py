@@ -50,6 +50,19 @@ class JobCreate(BaseModel):
     train_length: int | None = None
     cars: int | None = None
 
+    # Consist and RX detail. Present on the jobs table but absent from every
+    # historic PSTS562 record, so NULL on all 74 imported rows. Collected
+    # from live entry going forward.
+    axles: str | None = None
+    lead_unit: str | None = None
+    trailing_units: str | None = None
+    dp_units: str | None = None
+    release_care_control: datetime | None = None
+    rx_rtc: str | None = None
+    rx_mile_point: str | None = None
+    rx_time: datetime | None = None
+    rest: int | None = None
+
     # No auth exists yet (Phase 2) — the client must say who this is until
     # then. Phase 2 replaces this with the identity from the JWT.
     edited_by: str = Field(min_length=1)
@@ -69,6 +82,19 @@ class JobUpdate(BaseModel):
     run_miles: float | None = Field(default=None, ge=0)
     train_length: int | None = None
     cars: int | None = None
+
+    # Consist and RX detail. Present on the jobs table but absent from every
+    # historic PSTS562 record, so NULL on all 74 imported rows. Collected
+    # from live entry going forward.
+    axles: str | None = None
+    lead_unit: str | None = None
+    trailing_units: str | None = None
+    dp_units: str | None = None
+    release_care_control: datetime | None = None
+    rx_rtc: str | None = None
+    rx_mile_point: str | None = None
+    rx_time: datetime | None = None
+    rest: int | None = None
 
     edited_by: str = Field(min_length=1)
 
@@ -90,6 +116,15 @@ class JobResponse(BaseModel):
     run_miles: float | None
     train_length: int | None
     cars: int | None
+    axles: str | None
+    lead_unit: str | None
+    trailing_units: str | None
+    dp_units: str | None
+    release_care_control: datetime | None
+    rx_rtc: str | None
+    rx_mile_point: str | None
+    rx_time: datetime | None
+    rest: int | None
     work_minutes: int | None
     status: JobStatus
     source: JobSource
